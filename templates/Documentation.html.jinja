@@ -1,0 +1,56 @@
+{%- macro make_tree(tree) %}
+  <ul>
+  {%- for key, value in tree.items() %}
+    {%- if value is not mapping %}
+    <li><a href="{{ value }}" target="document_page">{{ key }}</a></li>
+    {%- else %}
+    <li>
+      {{ key }}
+      {{- make_tree(value) | indent(4) }}
+    </li>
+    {%- endif %}
+  {%- endfor %}
+  </ul>
+{%- endmacro %}
+<html>
+  <head>
+    <link rel="stylesheet" type="text/css" href="./style.css"/>
+
+    <script src="//unpkg.com/3d-force-graph"></script>
+    <script>
+      function resizeGraph() {
+        if (graph) {
+            const container = document.getElementById("graph");
+            const height = container.offsetHeight;
+            const width = container.offsetWidth;
+
+            graph.width(width);
+            graph.height(height);
+        }
+      }
+    </script>
+  </head>
+  <body>
+    <div id="tree">
+      {{- make_tree(tree) | indent(4) }}
+    </div>
+
+    <div id="graph"></div>
+
+    <iframe id="document" name="document_page" src="Root.html"></iframe>
+
+    <script>
+
+      const graph_data = {{ graph }};
+      const graph = ForceGraph3D()
+        (document.getElementById('graph'))
+        .graphData(graph_data)
+        .nodeAutoColorBy('group')
+        .linkDirectionalArrowLength(3.5)
+        .linkDirectionalArrowRelPos(1)
+        .linkCurvature(0.25);
+
+      resizeGraph();
+    </script>
+  </body>
+</html>
