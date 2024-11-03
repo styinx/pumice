@@ -1,6 +1,9 @@
 html
 {
   margin: 0;
+
+  color: {{ theme.color }};
+  background-color: {{ theme.backgroundColor }};
 }
 
 body
@@ -8,7 +11,7 @@ body
   display: flex;
   flex-direction: column;
   flex-wrap: wrap;
-  align-items:flex-end;
+  align-items: flex-end;
   position: absolute;
   min-width: 800px;
   min-height: 600px;
@@ -17,17 +20,25 @@ body
   margin: 0;
 }
 
+a
+{
+  color: {{ theme.primary }};
+}
+
 iframe
 {
   margin: none;
   border: none;
+  
+  color: {{ theme.color }};
+  background-color: {{ theme.backgroundColor }};
 }
 
 #document
 {
   flex: 1;
   width: calc(75% - 3px);
-  border-left: 3px solid grey;
+  border-left: 3px solid {{ theme.secondary }};
 }
 
 #graph

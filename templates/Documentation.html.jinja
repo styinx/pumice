@@ -18,19 +18,43 @@
 
     <script src="//unpkg.com/3d-force-graph"></script>
     <script>
-      function resizeGraph() {
-        if (graph) {
-            const container = document.getElementById("graph");
-            const height = container.offsetHeight;
-            const width = container.offsetWidth;
+      let graph;
 
-            graph.width(width);
-            graph.height(height);
+      function resizeGraph() {
+        const container = document.getElementById("graph");
+        if (container && graph) {
+          const height = container.offsetHeight;
+          const width = container.offsetWidth;
+
+          graph.width(width);
+          graph.height(height);
+        }
+      }
+
+      function createGraph() {
+        const container = document.getElementById("graph");
+        if (container) {
+          const height = container.offsetHeight;
+          const width = container.offsetWidth;
+
+          const graph_data = {{ graph }};
+          const graph = ForceGraph3D()(document.getElementById('graph'))
+            .width(width)
+            .height(height)
+            .graphData(graph_data)
+            .backgroundColor('{{ theme.graph.backgroundColor }}')
+            .nodeAutoColorBy('group')
+            .linkWidth(1)
+            .linkColor('{{ theme.graph.linkColor }}')
+            .linkDirectionalArrowLength(3.5)
+            .linkDirectionalArrowRelPos(1)
+            .linkDirectionalArrowColor('{{ theme.graph.linkArrowColor }}')
+            .linkCurvature(0.25)
         }
       }
     </script>
   </head>
-  <body>
+  <body onload="createGraph()">
     <div id="tree">
       {{- make_tree(tree) | indent(4) }}
     </div>
@@ -38,19 +62,5 @@
     <div id="graph"></div>
 
     <iframe id="document" name="document_page" src="Root.html"></iframe>
-
-    <script>
-
-      const graph_data = {{ graph }};
-      const graph = ForceGraph3D()
-        (document.getElementById('graph'))
-        .graphData(graph_data)
-        .nodeAutoColorBy('group')
-        .linkDirectionalArrowLength(3.5)
-        .linkDirectionalArrowRelPos(1)
-        .linkCurvature(0.25);
-
-      resizeGraph();
-    </script>
   </body>
 </html>

@@ -1,4 +1,5 @@
 import re
+import json
 from argparse import ArgumentParser, Namespace
 from markdown import markdown, Markdown
 from markdown.extensions import Extension
@@ -14,6 +15,7 @@ DIR_BASE = Path(__file__).parent
 DIR_DST = DIR_BASE / 'dst'
 DIR_SRC = DIR_BASE / 'src'
 DIR_TEMPLATES = DIR_BASE / 'templates'
+DIR_THEMES = DIR_BASE / 'themes'
 DIR_RESOURCES = DIR_BASE / 'resources'
 
 logger = getLogger()
@@ -94,7 +96,7 @@ def write_template(env: Environment, dst: Path, src: str, **kwargs):
     logger.info(f'Write file: {template_dst}')
 
 
-if __name__ == '__main__':
+def main():
     parser = ArgumentParser(
         f'Looks for *.md files in the source folder and converts them into *.html files. '
         f'The converted files are written into the destination directory.')
@@ -103,6 +105,7 @@ if __name__ == '__main__':
     parser.add_argument('-d', '--destination', type=Path, default=DIR_DST)
     parser.add_argument('-m', '--mode', type=str, choices=Mode.Modes, default=Mode.Public)
     parser.add_argument('-s', '--source', type=Path, default=DIR_SRC)
+    parser.add_argument('-t', '--theme', type=Path, default=DIR_THEMES / 'default.json')
 
     args = parser.parse_args()
     logger.debug(f'Arguments: {args}')
@@ -148,14 +151,24 @@ if __name__ == '__main__':
     links = [{'source': hash(source), 'target': hash(target[0])} for source, targets in references.items() for target in targets]
     graph = {'nodes': nodes, 'links': links}
 
+    # Load theme
+    theme = json.load(args.theme.open('r'))
+
+    # Page setup
+    page = {'root': args.destination.as_posix()}
+
     # Write additional template files to the destination directory
     env = Environment(loader=FileSystemLoader(DIR_TEMPLATES))
     env.filters['occurrences'] = lambda x, y : x.count(y)
-    write_template(env, args.destination, 'Documentation.html.jinja', graph=graph, tree=tree)
-    write_template(env, args.destination, 'style.css.jinja')
+    write_template(env, args.destination, 'Documentation.html.jinja', page=page, graph=graph, tree=tree, theme=theme)
+    write_template(env, args.destination, 'style.css.jinja', theme=theme)
 
     # Copy resource files to the destination directory
     for path in DIR_RESOURCES.iterdir():
         dest = args.destination / path.name
         logger.info(f'Copy {path} to {dest}')
         copytree(src=path, dst=dest, dirs_exist_ok=True)
+
+
+if __name__ == '__main__':
+    main()

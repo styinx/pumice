@@ -1,0 +1,12 @@
+{
+  "color": "#dddddd",
+  "backgroundColor": "#222222",
+  "primary": "#cc7700",
+  "secondary": "#0077cc",
+
+  "graph": {
+    "backgroundColor": "#111111",
+    "linkColor": "#cccccc",
+    "linkArrowColor": "#cc7700"
+  }
+}
