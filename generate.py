@@ -25,7 +25,8 @@ basicConfig()
 def hash(s) -> int:
     if isinstance(s, str):
         return adler32(bytes(s, encoding='utf-8'))
-    return adler32(bytes(str(s), encoding='utf-8'))
+    else:
+        return adler32(bytes(str(s), encoding='utf-8'))
 
 
 class Mode:
@@ -41,7 +42,7 @@ class ReferenceRename(Preprocessor):
     Replaces md with html extension in reference structures: [...](...).
     """
 
-    REF_RE = r'\[(\w+)\]\((\w+\.md)\)'
+    REF_RE = r'\[([\.\/\w]+)\]\(([\.\/\w]+\.md)\)'
 
     def __init__(self, destination: Path, references: dict, md: Markdown = None) -> None:
         super().__init__(md)
@@ -62,8 +63,10 @@ class ReferenceRename(Preprocessor):
                     name = m.group(1)
                     href = m.group(2)
 
-                    path = self._destination / href
-                    self._references.append((path, name))
+                    self._references.append({
+                        'link': name,
+                        'href': href
+                    })
 
                     new_line += line[:m.start(2)]
                     new_line += line[m.start(2):m.end(2)].replace('.md', '.html')
@@ -89,9 +92,14 @@ class ReferenceExtension(Extension):
         md.preprocessors.register(ReferenceRename(self._destination, self._references, md), 'ref_rename', 170)
 
 
-def write_template(env: Environment, dst: Path, src: str, **kwargs):
-    template_dst = dst / src[:src.rfind('.')]  # Remove the .jinja ending
-    template = env.get_template(src)
+def write_template(env: Environment, dst: Path, template_name: str, name: str = '', **kwargs):
+    if not name:
+        # Remove the .jinja ending
+        template_dst = dst / template_name[:template_name.rfind('.')]
+    else:
+        template_dst = dst / name
+
+    template = env.get_template(template_name)
     template_dst.open('w+').write(template.render(**kwargs))
     logger.info(f'Write file: {template_dst}')
 
@@ -111,32 +119,41 @@ def main():
     logger.debug(f'Arguments: {args}')
 
     # Clear the destination folder before writing
-    if args.clear:
+    if args.clear and args.destination.exists():
         logger.info(f'Removing folder {args.destination}')
         rmtree(args.destination)
+        args.destination.mkdir()
+
+    # Prepare generator environment
+    env = Environment(loader=FileSystemLoader(DIR_TEMPLATES))
+    env.filters['occurrences'] = lambda x, y : x.count(y)
 
     # Collect all markdown files in the source directory
     references = {}
     tree = {}
-    for page in args.source.rglob('*.md'):
-        content = page.open('r').read()
+    for document in args.source.rglob('*.md'):
+        content = document.open('r').read()
 
         # Normalize references and store them for each page
-        node = page
-        references[node] = []
-        html = markdown(content, extensions=[ReferenceExtension(args.source, references[node])])
+        references[document] = []
+        html = markdown(content, extensions=[ReferenceExtension(args.destination, references[document])])
+
+        # Resolve destination paths
+        dest_path = args.destination / document.relative_to(args.source).parent
+        dest_path.mkdir(parents=True, exist_ok=True)
+        dest_file = (dest_path / document.stem).with_suffix('.html')
+        rel_root = './' + '../' * dest_file.relative_to(args.destination).as_posix().count('/')
+
+        # Page setup
+        page = {'rel_root': rel_root, 'content': html}
 
         # Write the normalized pages to the destination directory
-        dest_path = args.destination / page.relative_to(args.source).parent
-        dest_path.mkdir(parents=True, exist_ok=True)
-        dest_file = (dest_path / page.stem).with_suffix('.html')
-        dest_file.open('w+').write(html)
-        logger.info(f'Write file: {dest_file}')
+        write_template(env, dest_path, 'page.html.jinja', dest_file.name, page=page)
 
         # Add entry in the tree
         try:
             base = tree
-            parents = iter(reversed(list(page.relative_to(args.source).parents)[:-1]))
+            parents = iter(reversed(list(document.relative_to(args.source).parents)[:-1]))
             parent = next(parents)
             while parents:
                 if parent.name not in base:
@@ -144,23 +161,35 @@ def main():
                 base = base[parent.name]
                 parent = next(parents)
         except StopIteration:
-            base[page.name] = str(dest_file.relative_to(args.destination))
-    
+            base[document.name] = str(dest_file.relative_to(args.destination))
+
     # Build the graph
-    nodes = [{'id': hash(n), 'name': n.name, 'group': hash(list(n.parents))} for n in references.keys()]
-    links = [{'source': hash(source), 'target': hash(target[0])} for source, targets in references.items() for target in targets]
+    nodes, links = [], []
+
+    for node in references.keys():
+        nodes.append({
+            'id': hash(node.as_posix()),       # Hashed file path
+            'name': node.name,                 # Filename
+            'group': hash(list(node.parents))  # Nesting count
+        })
+    
+    root = args.source.parent
+    for source, targets in references.items():
+        for target in targets:
+            relative_target = (source.parent / target['href']).resolve()
+            links.append({
+                'source': hash(source.as_posix()),
+                'target': hash(relative_target.relative_to(root.absolute()).as_posix()),
+            })
+
     graph = {'nodes': nodes, 'links': links}
+    graph = json.dumps(graph, indent=2)
 
     # Load theme
     theme = json.load(args.theme.open('r'))
 
-    # Page setup
-    page = {'root': args.destination.as_posix()}
-
     # Write additional template files to the destination directory
-    env = Environment(loader=FileSystemLoader(DIR_TEMPLATES))
-    env.filters['occurrences'] = lambda x, y : x.count(y)
-    write_template(env, args.destination, 'Documentation.html.jinja', page=page, graph=graph, tree=tree, theme=theme)
+    write_template(env, args.destination, 'Index.html.jinja', theme=theme, graph=graph, tree=tree)
     write_template(env, args.destination, 'style.css.jinja', theme=theme)
 
     # Copy resource files to the destination directory

@@ -4,6 +4,12 @@
   "primary": "#cc7700",
   "secondary": "#0077cc",
 
+  "tree": {
+    "fontSize": 1.5,
+    "fontFamily": "monospace",
+    "icons": true
+  },
+
   "graph": {
     "backgroundColor": "#111111",
     "linkColor": "#cccccc",

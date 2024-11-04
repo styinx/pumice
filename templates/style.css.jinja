@@ -8,6 +8,11 @@ html
 
 body
 {
+  margin: 0;
+}
+
+main
+{
   display: flex;
   flex-direction: column;
   flex-wrap: wrap;
@@ -18,6 +23,11 @@ body
   width: 100%;
   height: 100%;
   margin: 0;
+}
+
+section
+{
+  padding: 1em;
 }
 
 a
@@ -49,19 +59,23 @@ iframe
 
 #tree
 {
-  height: 75%;
-  width: 25%;
+  height: calc(75% - 1rem);
+  width: calc(25% - 1rem);
+  padding: 0.5rem;
+  overflow: auto;
 }
 
 #tree ul
 {
-  padding: 0 0 0 1rem;
   margin: 0;
+  padding: 0;
 }
 
 #tree ul li
 {
   list-style-type: none;
+  font-size: {{ theme.tree.fontSize }}rem;
+  font-family: {{ theme.tree.fontFamily }};
 }
 
 #tree ul li:first-child:before
@@ -72,6 +86,8 @@ iframe
 
 #tree ul li:before
 {
+  line-height: {{ theme.tree.fontSize + 0.25 }}rem;
+  font-size: {{ theme.tree.fontSize + 0.25 }}rem;
   padding: 0 0.25rem 0 0;
   content: '\2523';
 }
@@ -81,3 +97,20 @@ iframe
   padding: 0 0.25rem 0 0;
   content: '\2517';
 }
+
+#tree ul ul
+{
+  padding: 0 0 0 1.5rem;
+}
+
+{% if theme.tree.icons %}
+#tree ul li.folder:before
+{
+  content: '\1f4c1';
+}
+
+#tree ul li.file:before
+{
+  content: '\1f4c4';
+}
+{% endif %}

@@ -2,10 +2,9 @@
   <ul>
   {%- for key, value in tree.items() %}
     {%- if value is not mapping %}
-    <li><a href="{{ value }}" target="document_page">{{ key }}</a></li>
+    <li class="file"><a href="{{ value }}" target="document_page">{{ key }}</a></li>
     {%- else %}
-    <li>
-      {{ key }}
+    <li class="folder">{{ key }}
       {{- make_tree(value) | indent(4) }}
     </li>
     {%- endif %}
@@ -37,7 +36,8 @@
           const height = container.offsetHeight;
           const width = container.offsetWidth;
 
-          const graph_data = {{ graph }};
+          const graph_data = {{- graph | indent(10) -}};
+
           const graph = ForceGraph3D()(document.getElementById('graph'))
             .width(width)
             .height(height)
@@ -50,17 +50,20 @@
             .linkDirectionalArrowRelPos(1)
             .linkDirectionalArrowColor('{{ theme.graph.linkArrowColor }}')
             .linkCurvature(0.25)
+            .d3Force('link')
         }
       }
     </script>
   </head>
   <body onload="createGraph()">
-    <div id="tree">
-      {{- make_tree(tree) | indent(4) }}
-    </div>
+    <main>
+      <div id="tree">
+        {{- make_tree(tree) | indent(4) }}
+      </div>
 
-    <div id="graph"></div>
+      <div id="graph"></div>
 
-    <iframe id="document" name="document_page" src="Root.html"></iframe>
+      <iframe id="document" name="document_page" src="Root.html"></iframe>
+    </main>
   </body>
 </html>
