@@ -22,3 +22,6 @@ python start.py --source web --port 3000
 
 # Sample
 ![Sample](https://github.com/styinx/pumice/blob/master/sample.png)
+
+# Dependency
+[3d-force-graph](https://github.com/vasturiano/3d-force-graph)
