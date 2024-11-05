@@ -21,11 +21,11 @@ def create_folder(root: Path, base: Path, nested: int):
     global lookup
     folder = base / random_name()
     folder.mkdir(parents=True, exist_ok=True)
-    files = [folder / (random_name() + '.md') for _ in range(randint(1, 3))]
+    files = [folder / (random_name() + '.md') for _ in range(randint(2, 4))]
     lookup += files
     for file in files:
         text = ''
-        for _ in range(randint(1, 3)):
+        for _ in range(randint(0, 4)):
             link = lookup[randint(0, len(lookup) - 1)]
             rel_file = '../' * file.relative_to(root).as_posix().count('/')
             rel_link = rel_file + link.relative_to(root).as_posix()
@@ -45,5 +45,5 @@ if __name__ == '__main__':
     if args.destination.exists():
         shutil.rmtree(args.destination)
 
-    for i in range(randint(1, 3)):
-        create_folder(args.destination, args.destination, randint(1, 3))
+    for i in range(randint(2, 3)):
+        create_folder(args.destination, args.destination, randint(2, 3))
