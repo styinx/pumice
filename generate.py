@@ -3,6 +3,7 @@ import json
 from argparse import ArgumentParser, Namespace
 from markdown import markdown, Markdown
 from markdown.extensions import Extension
+from markdown.extensions.tables import TableExtension
 from markdown.preprocessors import Preprocessor
 from pathlib import Path
 from logging import getLogger, basicConfig, DEBUG
@@ -136,7 +137,10 @@ def main():
 
         # Normalize references and store them for each page
         references[document] = []
-        html = markdown(content, extensions=[ReferenceExtension(args.destination, references[document])])
+        html = markdown(content, extensions=[
+            ReferenceExtension(args.destination, references[document]),
+            TableExtension()
+        ])
 
         # Resolve destination paths
         dest_path = args.destination / document.relative_to(args.source).parent
