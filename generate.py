@@ -50,7 +50,7 @@ class ReferenceRename(Preprocessor):
 
         self._destination = destination
         self._references = references
-    
+
     def run(self, lines: list) -> list:
         renamed_lines = []
 
@@ -101,7 +101,7 @@ def write_template(env: Environment, dst: Path, template_name: str, name: str = 
         template_dst = dst / name
 
     template = env.get_template(template_name)
-    template_dst.open('w+').write(template.render(**kwargs))
+    template_dst.open('w+', encoding='utf-8').write(template.render(**kwargs))
     logger.info(f'Write file: {template_dst}')
 
 
@@ -133,7 +133,7 @@ def main():
     references = {}
     tree = {}
     for document in args.source.rglob('*.md'):
-        content = document.open('r').read()
+        content = document.open('r', encoding='utf-8').read()
 
         # Normalize references and store them for each page
         references[document] = []
@@ -176,7 +176,7 @@ def main():
             'name': node.name,                 # Filename
             'group': hash(list(node.parents))  # Nesting count
         })
-    
+
     root = args.source.parent
     for source, targets in references.items():
         for target in targets:
