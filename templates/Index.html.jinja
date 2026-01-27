@@ -2,31 +2,50 @@
   <ul>
   {%- for key, value in tree.items() %}
     {%- if value is not mapping %}
-    <li class="file"><a href="{{ value }}" target="document_page">{{ key }}</a></li>
+    <li class="file"><a href="./{{ value }}" target="document_page">{{ key }}</a></li>
     {%- else %}
+    <input type="checkbox" checked="true" id="{{ key }}"/>
+    <label for="{{ key }}">
     <li class="folder">{{ key }}
       {{- make_tree(value) | indent(4) }}
     </li>
+    </label>
     {%- endif %}
   {%- endfor %}
   </ul>
 {%- endmacro %}
 <html>
   <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ config.source_folder }}</title>
+    
     <link rel="stylesheet" type="text/css" href="./style.css"/>
 
-    <script src="//unpkg.com/3d-force-graph"></script>
+    <script src="./resources/js/3d-force-graph.js"></script>
     <script>
-      let graph;
+      let graph_instance;
+      let highlight_nodes = new Set();
+      let highlight_links = new Set();
 
       function resizeGraph() {
         const container = document.getElementById("graph");
-        if (container && graph) {
+        if (container && graph_instance) {
           const height = container.offsetHeight;
           const width = container.offsetWidth;
 
           graph.width(width);
           graph.height(height);
+        }
+      }
+
+      function onNodeClick(node, evt) {
+        const iframe = document.getElementById('document');
+        iframe.src = node.src;
+      }
+
+      function onNodeHover(node, evt) {
+        if(node) {
         }
       }
 
@@ -38,19 +57,44 @@
 
           const graph_data = {{- graph | indent(10) -}};
 
-          const graph = ForceGraph3D()(document.getElementById('graph'))
+          const graph_instance = ForceGraph3D()(document.getElementById('graph'))
+            .graphData(graph_data)
             .width(width)
             .height(height)
-            .graphData(graph_data)
             .backgroundColor('{{ theme.graph.backgroundColor }}')
+
+            // Nodes
+            .nodeVal('size')
+            .nodeRelSize(4)
+            .nodeResolution(8)
             .nodeAutoColorBy('group')
-            .linkWidth(1)
-            .linkColor('{{ theme.graph.linkColor }}')
-            .linkDirectionalArrowLength(3.5)
-            .linkDirectionalArrowRelPos(1)
-            .linkDirectionalArrowColor('{{ theme.graph.linkArrowColor }}')
-            .linkCurvature(0.25)
-            .d3Force('link')
+            .nodeOpacity({{ theme.graph.nodeOpacity }})
+            .onNodeClick(onNodeClick)
+            .onNodeHover(onNodeHover)
+
+            // Links
+            .linkWidth('weight')
+            .linkCurvature(0)
+            .linkOpacity({{ theme.graph.linkOpacity }})
+            .linkColor(() => '{{ theme.graph.linkColor }}')
+            .linkDirectionalArrowRelPos(1.05)
+            .linkDirectionalArrowLength(link => link.weight * 4)
+            .linkDirectionalArrowColor(() => '{{ theme.graph.linkArrowColor }}')
+            .linkDirectionalParticleWidth(4)
+
+            // Forces
+            .d3Force('link', forceLink().distance(link => link.weight * 10).strength(0.5))
+            .d3Force('charge', forceManyBody().strength(-10))
+            .d3Force('collision', forceCollide().radius(node => node.size * 10))
+            .d3Force('center', null)
+
+            // Freeze
+            .cooldownTicks(500)
+            .cooldownTime(2000)
+            .onEngineStop(() => {
+              graph.pauseAnimation();
+              graph.enableNodeDrag(false);
+            });
         }
       }
     </script>

@@ -1,12 +1,17 @@
+{%- set rel_root = page.rel_root.as_posix() if page.rel_root else '.' -%}
 <html>
   <head>
-    <link rel="stylesheet" type="text/css" href="{{ page.rel_root }}style.css"/>
+    <link rel="stylesheet" type="text/css" href="{{rel_root}}/style.css"/>
   </head>
   <body>
     <section>
+
       <!-- Page Start -->
-      {{- page.content | indent(6) }}
+
+      {{ page.content | indent(6) }}
+
       <!-- Page End -->
+
     </section>
   </body>
 </html>

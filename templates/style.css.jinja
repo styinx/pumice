@@ -33,6 +33,7 @@ section
 a
 {
   color: {{ theme.primary }};
+  text-decoration: none;
 }
 
 iframe
@@ -78,39 +79,44 @@ iframe
   font-family: {{ theme.tree.fontFamily }};
 }
 
-#tree ul li:first-child:before
-{
-  padding: 0 0.25rem 0 0;
-  content: '\250F';
-}
-
 #tree ul li:before
 {
   line-height: {{ theme.tree.fontSize + 0.25 }}rem;
   font-size: {{ theme.tree.fontSize + 0.25 }}rem;
-  padding: 0 0.25rem 0 0;
-  content: '\2523';
 }
 
-#tree ul li:last-child:before
+#tree ul li.folder
 {
-  padding: 0 0.25rem 0 0;
-  content: '\2517';
+  cursor: pointer;
+}
+
+#tree ul li.folder:before
+{
+  content: '\1F5C1';
+  color: {{ theme.secondary }};
+}
+
+#tree ul input[type="checkbox"]:not(:checked) + label li.folder:before {
+
+  content: '\1F5C0';
 }
 
 #tree ul ul
 {
-  padding: 0 0 0 1.5rem;
+  padding: 0 0 0 2rem;
 }
 
-{% if theme.tree.icons %}
-#tree ul li.folder:before
+#tree ul input[type="checkbox"]
 {
-  content: '\1f4c1';
+  display: none;
 }
 
-#tree ul li.file:before
-{
-  content: '\1f4c4';
+#tree ul input[type="checkbox"]:checked + label li.folder ul {
+  display: block;
 }
-{% endif %}
+
+#tree ul input[type="checkbox"]:not(:checked) + label li.folder ul {
+  display: none;
+}
+
+
