@@ -14,9 +14,11 @@ from random import choice, randint
 from re import compile, sub
 from shutil import copytree, rmtree
 from string import ascii_lowercase
-from sys import argv, exit
+from sys import exit
 from threading import Lock
 from webbrowser import open as open_browser
+
+import sys
 
 
 from markdown_it import MarkdownIt
@@ -168,7 +170,7 @@ def generate(args: Namespace):
     # Cleanup outdated files from previous runs.
     if args.destination_folder.exists():
         rmtree(args.destination_folder)
-    args.destination_folder.mkdir()
+    args.destination_folder.mkdir(parents=True, exist_ok=True)
 
     # Processor for markdown files.
     md_processor = MarkdownIt('commonmark')
@@ -231,7 +233,9 @@ def generate(args: Namespace):
     style_file.open('w+', encoding='utf-8').write(style_template.render(theme=theme))
 
     # Copy resource folder
-    copytree(args.resource_folder, args.destination_folder / 'resources')
+    resource_folder = args.destination_folder / 'resources'
+    resource_folder.mkdir(parents=True, exist_ok=True)
+    copytree(args.resource_folder, resource_folder)
 
 
 def host(args: Namespace):
@@ -261,7 +265,7 @@ def sample(args: Namespace):
     # Cleanup outdated files from previous runs.
     if args.folder.exists():
         rmtree(args.folder)
-    args.folder.mkdir()
+    args.folder.mkdir(parents=True, exist_ok=True)
 
     def _random_name():
         return ''.join(choice(ascii_lowercase) for _ in range(randint(5, 10)))
@@ -321,12 +325,14 @@ def create_parser():
 
     sample = sub_parsers.add_parser('sample', help='Creates sample files.')
     sample.add_argument('-f', '--folder', type=Path, default=DIR_DST)
-    sample.add_argument('-n', '--nesting-depth', type=int, default=5)
+    sample.add_argument('-d', '--document-count', type=tuple, default=(2-4))
+    sample.add_argument('-l', '--link-count', type=tuple, default=(1-5))
+    sample.add_argument('-n', '--nesting-depth', type=tuple, default=(2-4))
 
     return parser
 
 
-def main(argv: list[str]) -> int:
+def main(argv: list[str] = sys.argv[1:]) -> int:
     #logger = create_logger()
 
     parser = create_parser()
@@ -346,4 +352,4 @@ def main(argv: list[str]) -> int:
 
 
 if __name__ == '__main__':
-    exit(main(argv[1:]))
+    exit(main())

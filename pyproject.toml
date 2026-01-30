@@ -1,0 +1,50 @@
+[build-system]
+requires        = [
+    "build~=1.2.2",
+    "setuptools>=61.0"
+]
+build-backend   = "setuptools.build_meta"
+
+[tool.setuptools]
+packages = ["pumice"]
+
+[tool.setuptools.dynamic]
+version = { attr="pumice.__VERSION__" }
+
+[tool.setuptools.package-dir]
+"" = "sources"
+
+[tool.yapfignore]
+ignore_patterns = []
+
+[project]
+name            = "pumice"
+dynamic         = ["version"]
+requires-python = ">=3.11"
+description     = "Convert Markdown files to HTML"
+readme          = "README.md"
+authors         = [ { name="styinx" } ]
+classifiers     = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3.11",
+    "Topic :: Text Processing",
+    "Topic :: Utilities",
+]
+license         = { file="LICENSE" }
+dependencies    = [
+    "markdown-it-py~=3.0.0"
+]
+
+[project.scripts]
+pumice = "pumice.main:main"
+
+[project.optional-dependencies]
+formatting = [
+    "yapf~=0.43.0"
+]
+
+[project.urls]
+Homepage = "https://github.com/styinx/pumice"
+Issues = "https://github.com/styinx/pumice/issues"

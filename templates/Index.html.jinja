@@ -24,9 +24,7 @@
 
     <script src="./resources/js/3d-force-graph.js"></script>
     <script>
-      let graph_instance;
-      let highlight_nodes = new Set();
-      let highlight_links = new Set();
+      var graph_instance;
 
       function resizeGraph() {
         const container = document.getElementById("graph");
@@ -34,8 +32,8 @@
           const height = container.offsetHeight;
           const width = container.offsetWidth;
 
-          graph.width(width);
-          graph.height(height);
+          graph_instance.width(width);
+          graph_instance.height(height);
         }
       }
 
@@ -57,7 +55,7 @@
 
           const graph_data = {{- graph | indent(10) -}};
 
-          const graph_instance = ForceGraph3D()(document.getElementById('graph'))
+          graph_instance = ForceGraph3D()(document.getElementById('graph'))
             .graphData(graph_data)
             .width(width)
             .height(height)
@@ -95,17 +93,25 @@
               graph.pauseAnimation();
               graph.enableNodeDrag(false);
             });
+
+          window.addEventListener('resize', resizeGraph);
         }
       }
     </script>
   </head>
   <body onload="createGraph()">
     <main>
-      <div id="tree">
-        {{- make_tree(tree) | indent(4) }}
-      </div>
+      <input type="checkbox" id="collapse" />
 
-      <div id="graph"></div>
+      <aside>
+        <div id="tree">
+          {{- make_tree(tree) | indent(4) }}
+        </div>
+
+        <div id="graph"></div>
+      </aside>
+      
+      <label for="collapse"></label>
 
       <iframe id="document" name="document_page"></iframe>
     </main>
