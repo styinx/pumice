@@ -1,0 +1,7 @@
+*.pyc
+
+build/
+dist/
+html/
+sample/
+**/*egg-info/

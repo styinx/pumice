@@ -5,7 +5,6 @@ from importlib import util
 from itertools import chain
 from jinja2 import Environment, FileSystemLoader
 from json import dumps
-from logging import getLogger, basicConfig
 from multiprocessing import Queue, cpu_count
 from os import path as OsPath
 from pathlib import Path
@@ -20,18 +19,16 @@ from webbrowser import open as open_browser
 
 import sys
 
-
 from markdown_it import MarkdownIt
+
+from pumice.util.logger import get_logger, LogLevel
 
 DocumentLinks = dict[Path, list[Path]]
 
 DIR_BASE = Path(__file__).parent.parent
-DIR_DST = DIR_BASE / 'dst'
-DIR_RES = DIR_BASE / 'resources'
-DIR_SRC = DIR_BASE / 'src'
+DIR_RESOURCES = DIR_BASE / 'resources'
 DIR_TEMPLATES = DIR_BASE / 'templates'
 DIR_THEMES = DIR_BASE / 'themes'
-DIR_RESOURCES = DIR_BASE / 'resources'
 
 RE_MD_FILE_EXTENSION = compile(r'\.md$')
 
@@ -40,9 +37,7 @@ DOCUMENT_LINKS: DocumentLinks = {}
 
 lock = Lock()
 
-basicConfig()
-logger = getLogger(__name__)
-logger.setLevel('INFO')
+logger = get_logger('pumice')
 
 
 class Visibility:
@@ -132,10 +127,10 @@ def build_graph(link_list: DocumentLinks, args: Namespace) -> dict:
 
     for html_file in html_files:
         nodes.append({
-            'id': hash(html_file.as_posix()),           # Hashed file path
-            'size': incoming_links.get(html_file, 1),   # Incoming links count
-            'name': html_file.name,                     # Filename
-            'group': len(list(html_file.parents)),      # Nesting count
+            'id': hash(html_file.as_posix()),  # Hashed file path
+            'size': incoming_links.get(html_file, 1),  # Incoming links count
+            'name': html_file.name,  # Filename
+            'group': len(list(html_file.parents)),  # Nesting count
             'src': './' + html_file.relative_to(args.destination_folder).as_posix()
         })
 
@@ -214,6 +209,7 @@ def generate(args: Namespace):
     logger.debug(theme)
 
     # Write index file.
+    logger.info('Writing template base files...')
     index_template = jinja_env.get_template('index.html.jinja')
     index_file = args.destination_folder / 'index.html'
     index_file.open(
@@ -231,11 +227,13 @@ def generate(args: Namespace):
     style_template = jinja_env.get_template('style.css.jinja')
     style_file = args.destination_folder / 'style.css'
     style_file.open('w+', encoding='utf-8').write(style_template.render(theme=theme))
+    logger.info('Done')
 
     # Copy resource folder
+    logger.info('Copying resources...')
     resource_folder = args.destination_folder / 'resources'
-    resource_folder.mkdir(parents=True, exist_ok=True)
     copytree(args.resource_folder, resource_folder)
+    logger.info('Done')
 
 
 def host(args: Namespace):
@@ -254,8 +252,10 @@ def host(args: Namespace):
     open_browser(f'http://localhost:{args.port}')
 
     try:
+        logger.info(f'Starting web server from {args.folder} at {args.port}...')
         server.serve_forever()
     except KeyboardInterrupt:
+        logger.info('Shutdown received...')
         server.server_close()
 
 
@@ -263,36 +263,46 @@ def sample(args: Namespace):
     files = []
 
     # Cleanup outdated files from previous runs.
+    logger.info(f'Cleanup folder "{args.folder}"...')
     if args.folder.exists():
         rmtree(args.folder)
     args.folder.mkdir(parents=True, exist_ok=True)
+    logger.info('Done')
+
+    nesting_depth = randint(*args.nesting_depth)
 
     def _random_name():
         return ''.join(choice(ascii_lowercase) for _ in range(randint(5, 10)))
 
     def _populate(folder: Path, depth: int):
-        if depth == 0:
+        if depth == nesting_depth:
             return
 
-        for _ in range(randint(2, 4)):
+        documents = randint(*args.document_count)
+        links = randint(*args.link_count)
+        subfolders = randint(*args.subfolder_count)
+
+        logger.info(f'- {folder} [{depth=}, {documents=}, {links=}, {subfolders=}]')
+
+        for _ in range(documents):
             file_path = folder / f'{_random_name()}.md'
             fp = file_path.open('w')
             fp.write(f'# {file_path.name}\n')
             if files:
-                for _ in range(randint(1, 4)):
+                for _ in range(links):
                     random_link = choice(files)
                     rel_path = Path(OsPath.relpath(random_link, file_path.parent))
                     fp.write(f'[{rel_path.name}]({rel_path.as_posix()})\n')
             files.append(file_path)
 
-        for _ in range(randint(1, 3)):
+        for _ in range(subfolders):
             sub_folder_name = folder / _random_name()
             sub_folder_name.mkdir(parents=True, exist_ok=True)
-            _populate(sub_folder_name, depth - 1)
+            _populate(sub_folder_name, depth + 1)
 
-    args.folder.mkdir(parents=True, exist_ok=True)
-
-    _populate(args.folder, args.nesting_depth)
+    logger.info('Create sample...')
+    _populate(args.folder, 0)
+    logger.info('Done')
 
 
 def create_parser():
@@ -303,6 +313,7 @@ def create_parser():
         f'Looks for *.md files in the source folder and converts them into *.html files. '
         f'The converted files are written into the destination directory.'
     )
+    parser.add_argument('-l', '--log-level', type=str, choices=LogLevel.Levels, default=LogLevel.Info)
 
     sub_parsers = parser.add_subparsers(dest='command')
 
@@ -311,42 +322,46 @@ def create_parser():
         help=f'Looks for *.md files in the source folder and converts them into *.html files. '
         f'The converted files are written into the destination directory.'
     )
+    generate.add_argument('-d', '--destination-folder', type=Path, required=True)
+    generate.add_argument('-j', '--jinja-folder', type=Path, default=DIR_TEMPLATES)
     generate.add_argument('-n', '--name', type=str)
     generate.add_argument('-m', '--mode', type=str, choices=Visibility.Choices, default=Visibility.Public)
-    generate.add_argument('-d', '--destination-folder', type=Path, required=True, default=DIR_DST)
-    generate.add_argument('-s', '--source-folder', type=Path, required=True, default=DIR_SRC)
-    generate.add_argument('-r', '--resource-folder', type=Path, default=DIR_RES)
-    generate.add_argument('-j', '--jinja-folder', type=Path, default=DIR_TEMPLATES)
+    generate.add_argument('-r', '--resource-folder', type=Path, default=DIR_RESOURCES)
+    generate.add_argument('-s', '--source-folder', type=Path, required=True)
     generate.add_argument('-t', '--theme', type=Path, default=DIR_THEMES / 'default.py')
 
     host = sub_parsers.add_parser('host', help='Starts an HTTP server.')
-    host.add_argument('-f', '--folder', type=Path, default=DIR_DST)
+    host.add_argument('-f', '--folder', type=Path, required=True)
     host.add_argument('-p', '--port', type=int, default=8000)
 
     sample = sub_parsers.add_parser('sample', help='Creates sample files.')
-    sample.add_argument('-f', '--folder', type=Path, default=DIR_DST)
-    sample.add_argument('-d', '--document-count', type=tuple, default=(2-4))
-    sample.add_argument('-l', '--link-count', type=tuple, default=(1-5))
-    sample.add_argument('-n', '--nesting-depth', type=tuple, default=(2-4))
+    sample.add_argument('-d', '--document-count', type=tuple, default=(2, 4))
+    sample.add_argument('-f', '--folder', type=Path, required=True)
+    sample.add_argument('-l', '--link-count', type=tuple, default=(1, 5))
+    sample.add_argument('-n', '--nesting-depth', type=tuple, default=(2, 4))
+    sample.add_argument('-s', '--subfolder-count', type=tuple, default=(1, 5))
 
     return parser
 
 
 def main(argv: list[str] = sys.argv[1:]) -> int:
-    #logger = create_logger()
-
     parser = create_parser()
 
     args = parser.parse_args(argv)
 
+    logger.setLevel(args.log_level.upper())
+
     if args.command == 'generate':
         generate(args)
 
-    if args.command == 'host':
+    elif args.command == 'host':
         host(args)
 
-    if args.command == 'sample':
+    elif args.command == 'sample':
         sample(args)
+
+    else:
+        parser.print_help()
 
     return 0
 
